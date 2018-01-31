@@ -22,18 +22,146 @@
 #include "bzerker.h"
 #include <stdio.h>
 #include <stdlib.h>
-//    Parameters to vary for testing
+//    Parameters that define the generalized form
+//    of tic-tac-toe.
 #define STATES 19683
 #define ACTIONS 9
-#define TOKENS 1000
-#define REPEATS   20000000
-#define BATCHSIZE 1000000
+
+//    Various learning protocols - addition, multiplication, etc.
+//
+//     NB - wrap negative coefficients in parenthesis (like this)
+//     otherwise #define expansions my act weird!
+
+//   Additive learns: +/-1 for win/lose, +0.1 for draw
+//#define PLUSMINUS1OH1
+#ifdef PLUSMINUS1OH1
+#define TOKENS 100
+#define REPEATS   1000000
+#define BATCHSIZE 100000
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+
+//   Additive learns: +/-1 for win/lose, +0.01 for draw
+//#define PLUSMINUS1OHOH1
+#ifdef PLUSMINUS1OHOH1
+#define TOKENS 100
+#define REPEATS   1000000
+#define BATCHSIZE 100000
 #define WIN_ADD 1.0
 #define WIN_MUL 1.0
 #define LOSE_ADD (-1.0)
 #define LOSE_MUL 1.0
 #define DRAW_ADD 0.01
 #define DRAW_MUL 1.0
+#endif
+
+
+//   Additive learns: +/-1 for win/lose, +0.001 for draw
+//   Yes, it still converges, but slower!
+//#define PLUSMINUS1OHOHOH1
+#ifdef PLUSMINUS1OHOHOH1
+#define TOKENS 100
+#define REPEATS   1000000
+#define BATCHSIZE 100000
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.001
+#define DRAW_MUL 1.0
+#endif
+
+//  Multiplicative learns - sometimes don't converge as well
+//  because marginally good strategies can get into exponential
+//  growth.   For example, this one does not converge!
+//#define MULT101
+#ifdef MULT101
+#define TOKENS 100
+#define REPEATS   1000000
+#define BATCHSIZE 100000
+#define WIN_ADD 0.0
+#define WIN_MUL 1.5
+#define LOSE_ADD (0.0)
+#define LOSE_MUL 0.6666
+#define DRAW_ADD 0.0
+#define DRAW_MUL 1.25
+#endif
+
+//    Note sensitivity - change "draw add" to zero and
+//    this one will no longer converge!  
+//#define MULT15
+#ifdef MULT15
+#define TOKENS 100
+#define REPEATS   1000000
+#define BATCHSIZE 100000
+#define WIN_ADD 0.0
+#define WIN_MUL 1.5
+#define LOSE_ADD (0.0)
+#define LOSE_MUL 0.66666
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+
+//   A non-zero-sum game that converges well, but not as fast
+//   as the symmetrical games above.
+//   
+//#define POINTSCORE
+#ifdef POINTSCORE
+#define TOKENS 100
+#define REPEATS   1000000
+#define BATCHSIZE 100000
+#define WIN_MUL 1.0
+#define WIN_ADD 1.0
+#define LOSE_MUL 1.0
+#define LOSE_ADD (-0.7)
+#define DRAW_MUL (1.0)
+#define DRAW_ADD (0.5)
+#endif
+
+
+//   The same game, but made symmetrical... much faster convergence!
+//   
+#define POINTSCORESYMM
+#ifdef POINTSCORESYMM
+#define TOKENS 100
+#define REPEATS   1000000
+#define BATCHSIZE 100000
+#define WIN_MUL 1.0
+#define WIN_ADD 1.0
+#define LOSE_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define DRAW_MUL (1.0)
+#define DRAW_ADD (0.5)
+#endif
+
+
+
+//    Here's a non-zero-sum one that converges, albeit slowly
+//    (note we give it 10 million double-games and it's still
+//    just barely edging into forced-draw.   That's because
+//    there's no penalty for losing!)
+//#define POINTSCORENOLOSEPENALTY
+#ifdef POINTSCORENOLOSEPENALTY
+#define TOKENS 100
+#define REPEATS   10000000
+#define BATCHSIZE 1000000
+#define WIN_MUL 1.0
+#define WIN_ADD 1.0
+#define LOSE_MUL 1.0
+#define LOSE_ADD (0.0)
+#define DRAW_MUL (1.0)
+#define DRAW_ADD (0.5)
+#endif
+
+
+
+
+
 #define MAX_TURNS 10
 #define PRINT_EACHGAME 0
 
@@ -54,6 +182,12 @@ main ()
   printf ("Got brains! pointers are %li and %li\n",(long) brain1,(long) brain2);
 
   printf (" I would like to play %d double-games of tic-tac-toe.  Against myself.\n", REPEATS);
+
+  printf ("\nLearning coeffss (M,A):\n  W: %f %f\n  L: %f %f\n  D: %f %f \n",
+	  //123.0, 234.0, 345.0, 456.0, 567.0, 678.0 );
+	  WIN_MUL, WIN_ADD, LOSE_MUL, LOSE_ADD, DRAW_MUL, DRAW_ADD );
+	  //WIN_MUL, WIN_ADD, LOSE_MUL, LOSE_ADD, DRAW_MUL, DRAW_ADD );
+  
   int reps, i, j, action, batch;
   action = 0;
   int log_0 [REPEATS/BATCHSIZE];
@@ -82,9 +216,8 @@ main ()
     if (action == 1) { log_1[batch]++; };
     if (action == 2) { log_2[batch]++; };
   }
-  printf ("\nFactors (M,A): W: %f %f  L: %f %f  D: %f %f\n",
-	  WIN_MUL, WIN_ADD, LOSE_MUL, LOSE_ADD, DRAW_MUL, DRAW_ADD);
-  printf ("Overall Results: \n Pttn          P1         P2        Draw    Underflow\n");
+
+  printf ("Overall Results: \n   Pttn         P1      P2       Draw    Underflows\n");
   long p50, p90, ctpp;  // 50% and 90% points for draws, underflows
   p50 = p90 = 999999999;
   ctpp = 0;
