@@ -138,23 +138,36 @@
 //           my_chain = bz_newchain (my_brain);   // to actually init storage
 //     
 //     At this point, you can train the brain by the following procedure.
-//     First, ask the brain for an action with bz_next_action:
+//     First, ask the brain for an action with bz_nextaction:
 //
-//         action = bz_next_action (*brain, state, *mask, *underflows)
+//       action = bz_nextaction (*brain, state, *evse, *mask, *underflows)
 //
 //     which returns an integer action.  The variable *brain is a pointer
-//     to the brain struct, "state" is an integer state of the system,
+//     to the brain struct, "state" is an integer state of the system
+//
+//     "*evse" is a floating point pointer to the ratio exponentiator and
+//     allows control of the "explore vs. exploit" question.  1.0 is
+//     "BOXES Classic", with linear weighting.  Values > 1 cause boxes
+//     with higher positive experience to be chosen more often than strict
+//     random choice of Michie tokens would suggest (exploit); values < 1
+//     cause boxes with higher positive experience to be chosen less often
+//     than strict random choice of Michie's tokens would suggest (explore).
+//     This action is local and variable on a per-call basis.  NULL here uses
+//     1.0 as the ratio exponent, which as we say above, is "BOXES Classic".
+//
 //     "*mask" is a *char array of length max_actions, where <=0  entries
 //     mark forbidden actions, and >0 entries mark permitted actions.
-//     Note, of course, that using \0 as a character in a char string
+//     Note, of course, that using '\0' as a character in a char string
 //     is fraught with peril should you use any function that expects null
-//     terminated strings!!!
+//     terminated strings!!! (bzerker doesn't care, but other cocde might).
+//     Using NULL for *mask allows all possible actions.
 //
 //     *underflows is a pointer to an int; this int gets incremented
 //     every time there's fewer than one token in the permitted set of
 //     actions (when this happens, all boxes for that state get reinitialized
 //     with the initial number of tokens again, and the *underflows counter
-//     gets incremented; if you set *underflows to NULL it won't be incremented)
+//     gets incremented; if you set *underflows to NULL it won't be
+//     incremented so don't worry about a SEGFAULT thru the null pointer)
 //
 //     Once you have an action, you should add the action to the action
 //     chain for this training by calling bz_addtochain:
@@ -180,6 +193,13 @@
 //     boxes, increasing the chance that the next time through, the actions
 //     that lead to better outcomes have higher probability and the actions
 //     with worse outcomes have lower probability.
+//
+//     You can also just learn the last N moves in a given chain, by
+//     truncating the chain.   Do this by:
+//
+//         int bz_truncatechain (bz_chain *chain, long count);
+//
+//     to learn only the last "count" number of ACTIONs on that chain.
 //
 //     Finally, after training the chain, you should deallocate the chain
 //     with bz_killchain.  Otherwise, actions will continue to accumulate,
@@ -212,6 +232,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include "bzerker.h"
 
 int bz_tracemode = 0;
@@ -349,9 +370,10 @@ int bz_prettyprint_block (bz_block *block){
 //
 //       The core of the algorithm- given a set of boxes (the "brain"), and
 //       a current state, pick an action randomly! 
-long bz_next_action (
+long bz_nextaction (
 		     bz_brain *brain,
 		     int cur_state,
+		     float *evse,
 		     char *mask,
 		     int *underflows
 		     )
@@ -363,35 +385,64 @@ long bz_next_action (
   int myrandom, i;
   float sumup;
   sumup = 0;
+  float sumup2;
+  sumup2 = 0;
+  float expval;
+  
+  expval = (evse == NULL) ? 1.0 : *evse;
   for (i = 0; i < brain->maxactions; i++) {
     //   hidden assumption that mask is "long enough".  Otherwise,
     //   we'll be sucking mud because C doesn't usually check subscripts.
     //
     if (mask == NULL || mask[i] >= 0) {
-      sumup += brain->states[cur_state]->actions[i];  // always >= 0
+	sumup += brain->states [cur_state]->actions[i];
+    }
+  }
+  if (evse) {
+    for (i = 0; i < brain->maxactions; i++) {
+      if (mask == NULL || mask[i] >= 0 ) {
+	sumup2 += pow (
+		      (brain->states[cur_state]->actions[i] /
+		       (sumup/brain->maxactions)),
+		      expval);  // always >= 0
+      }
     }
   }
   //fprintf (stderr, "sumup: %f ", sumup);
-  //BUG IN MASK SOMEWHERE NEAR HERE???
+  //
+  //    Check for underflowing brain tokens here.
+  ///    GROT GROT GROT Move this to LEARNING!
   if (bz_tracemode) fprintf (stderr, " total tokens: %f ", sumup);
-  if (sumup <= 1) {
+  if (sumup <= 1) {    ///   ARBITRARY CHOICE
     if (0) { printf (" UNDERFLOW "); fflush (stdout);};
     if (underflows) { (*underflows)++;}
     for (i = 0; i < brain->maxactions; i++) {
       if (mask == NULL || mask[i] >= 0)
 	brain->states[cur_state]->actions[i] = brain->starting_tokens;
     }
+    sumup = brain->maxactions * brain->starting_tokens;
+    sumup2 = brain->maxactions;
   }
   i = 0;
-  myrandom = bz__random (sumup);
-  for (i = 0; i < brain->maxactions; i++) {
-    if (mask == NULL || mask[i] >= 0) {
-      myrandom -= brain->states[cur_state] -> actions[i];
+  if (evse) {
+    myrandom = bz__random (sumup2);
+    for (i = 0; i < brain->maxactions; i++) {
+      if (mask == NULL || mask[i] >= 0) {
+	myrandom -= pow (brain->states[cur_state] -> actions[i]/
+			 (sumup/brain->maxactions), expval);
+	if (myrandom <= 0) return (i);
+      }
     }
-    if (myrandom <= 0) return (i);
+  } else {
+    myrandom = bz__random (sumup);
+    for (i = 0; i < brain->maxactions; i++) {
+      if (mask == NULL || mask[i] >= 0) {
+	myrandom -= brain->states [cur_state] -> actions[i] ;
+	if (myrandom <= 0) return (i);
+      }
+    }
   }
-  
-  return i;
+  return 0;
 }
 
 long bz_addtoblock (

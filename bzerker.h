@@ -193,6 +193,7 @@ bz_chain *bz_newchain (bz_brain *brain);
 long bz_nextaction (
 		     bz_brain *brain,
 		     int cur_state,
+		     float *evse,       // research vs. exploit control
 		     char mask[],       // the set of allowed actions
 		     int *underflows    // optional underflows (incremented)
 		     );

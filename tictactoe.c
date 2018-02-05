@@ -4,19 +4,24 @@
 //
 //  Learn to play tic-tac-toe by reinforcement learning.
 //
-//  Data structures: the board, which has a 0, a +1, or a +2 on each cell
+//  Data structures: the board, which has a 0, a +1, or a +2 on each cell,
+//   showing whether the cell is unoccupied, has an O, or has an X.
+//
 //  Actions: 1 thru 9 (always allocated) - we generate a mask at runtime
 //   to avoid choosing actions that are illegal (i.e. moves to
 //   already-occupied cells on the board)
+//
 //  States- there are 3^9 = 19683 possible states for the tic-tac-toe
-//   board, but not all of them are reachable.  We Don't Care (yes, the
-//   classic Mitchie treatment uses reflectional and rotational symmetry for 314
+//   board, but not all of them are reachable.  Yes, the classic
+//   Mitchie treatment uses reflectional and rotational symmetry for 288
 //   unique boards.  We could do that, or we could just brute-force it,
 //   at something like a 20:1 disadvantage.  But it's faster to code
 //   this way, and far more general.
-//  There are only 9 possible moves on each side, so ACTIONS = 9 (yes, some
+
+//  ACTIONS There are only 9 possible moves, so ACTIONS = 9 (yes, some
 //   are illegal.  We use the "mask" variable to specify which are legal,
-//   and generate it at runtime rather than enumerating it for all 19K boards.
+//   and generate it at runtime rather than enumerating it for all 19K
+//   possible board states.
 //
 //
 #include "bzerker.h"
@@ -38,6 +43,8 @@
 #define TOKENS 100
 #define REPEATS   1000000
 #define BATCHSIZE 100000
+#define FLAT_EVSE 1
+#define EVSE 1.00
 #define WIN_ADD 1.0
 #define WIN_MUL 1.0
 #define LOSE_ADD (-1.0)
@@ -45,6 +52,74 @@
 #define DRAW_ADD 0.1
 #define DRAW_MUL 1.0
 #endif
+
+
+//   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 0.5 EVSE
+//#define PLUSMINUS1OH1EVSE05
+#ifdef PLUSMINUS1OH1EVSE05
+#define TOKENS 100
+#define REPEATS   1000000
+#define BATCHSIZE 100000
+//#define FLAT_EVSE 1
+#define EVSE 0.5
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+
+//   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 2.0 EVSE
+//#define PLUSMINUS1OH1EVSE20
+#ifdef PLUSMINUS1OH1EVSE20
+#define TOKENS 100
+#define REPEATS   1000000
+#define BATCHSIZE 100000
+//#define FLAT_EVSE 1
+#define EVSE 2.0
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+
+//   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 3.0 EVSE
+//   It learns wicked fast now.
+//#define PLUSMINUS1OH1EVSE30
+#ifdef PLUSMINUS1OH1EVSE30
+#define TOKENS 100
+#define REPEATS   1000000
+#define BATCHSIZE 100000
+//#define FLAT_EVSE 1
+#define EVSE 3.0
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+
+//   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 4.0 EVSE
+//   It learns wicked fast now.
+#define PLUSMINUS1OH1EVSE40
+#ifdef PLUSMINUS1OH1EVSE40
+#define TOKENS 100
+#define REPEATS   1000000
+#define BATCHSIZE 100000
+//#define FLAT_EVSE 1
+#define EVSE 4.0
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+
 
 //   Additive learns: +/-1 for win/lose, +0.01 for draw
 //#define PLUSMINUS1OHOH1
@@ -76,11 +151,12 @@
 #define DRAW_MUL 1.0
 #endif
 
-//  Multiplicative learns - sometimes don't converge as well
+//  Multiplicative learns (setups with mult factors not equal
+//  to 1) - sometimes don't converge as well
 //  because marginally good strategies can get into exponential
 //  growth.   For example, this one does not converge!
-//#define MULT101
-#ifdef MULT101
+//#define MULT15
+#ifdef MULT15
 #define TOKENS 100
 #define REPEATS   1000000
 #define BATCHSIZE 100000
@@ -92,10 +168,27 @@
 #define DRAW_MUL 1.25
 #endif
 
+//   ... and this one, with *smaller* multipliers for fewer
+//   overflows, also does not converge, even though the
+//   "reward" for DRAW is *higher* than the reward for win!
+//#define MULT101
+#ifdef MULT101
+#define TOKENS 100
+#define REPEATS   10000000
+#define BATCHSIZE 1000000
+#define WIN_ADD 0.0
+#define WIN_MUL 1.001
+#define LOSE_ADD (0.0)
+#define LOSE_MUL 0.9
+#define DRAW_ADD 0.0
+#define DRAW_MUL 1.01
+#endif
+
+
 //    Note sensitivity - change "draw add" to zero and
 //    this one will no longer converge!  
-//#define MULT15
-#ifdef MULT15
+//#define MULT15NOADD
+#ifdef MULT15NOADD
 #define TOKENS 100
 #define REPEATS   1000000
 #define BATCHSIZE 100000
@@ -126,7 +219,7 @@
 
 //   The same game, but made symmetrical... much faster convergence!
 //   
-#define POINTSCORESYMM
+//#define POINTSCORESYMM
 #ifdef POINTSCORESYMM
 #define TOKENS 100
 #define REPEATS   1000000
@@ -183,9 +276,8 @@ main ()
 
   printf (" I would like to play %d double-games of tic-tac-toe.  Against myself.\n", REPEATS);
 
-  printf ("\nLearning coeffss (M,A):\n  W: %f %f\n  L: %f %f\n  D: %f %f \n",
-	  //123.0, 234.0, 345.0, 456.0, 567.0, 678.0 );
-	  WIN_MUL, WIN_ADD, LOSE_MUL, LOSE_ADD, DRAW_MUL, DRAW_ADD );
+  printf ("\nLearning coeffs: Explore vs Exploit: %f\n Add    Mul \n  W: %f %f\n  L: %f %f\n  D: %f %f \n",
+	  EVSE, WIN_MUL, WIN_ADD, LOSE_MUL, LOSE_ADD, DRAW_MUL, DRAW_ADD );
 	  //WIN_MUL, WIN_ADD, LOSE_MUL, LOSE_ADD, DRAW_MUL, DRAW_ADD );
   
   int reps, i, j, action, batch;
@@ -303,6 +395,8 @@ int play_ttt( bz_brain *b1, bz_chain *s1,
   int showboards;
   bz_brain *btemp;
   bz_chain *ctemp;
+  float local_expval;
+  local_expval = EVSE;
   showboards = 0;
   //   Start with a blank board.
   for (i = 0; i < 9; i++) gb[i] = 0;
@@ -323,7 +417,12 @@ int play_ttt( bz_brain *b1, bz_chain *s1,
       for (i = 0; i < 9; i++) mask[i] = 0;
       mask[0] = mask[1] = mask[4] = 1;
     }
-    move = bz_next_action (b1, state, mask, gamblers_ruin);
+#ifdef FLAT_EVSE
+    move = bz_nextaction (b1, state, NULL, mask, gamblers_ruin);
+#else    
+    move = bz_nextaction (b1, state, &local_expval, mask, gamblers_ruin);
+#endif
+    
     if (showboards) printf ("Board: %d%d%d%d%d%d%d%d%d S: %d P%d moves %d \n",
         gb[0],gb[1],gb[2],gb[3],gb[4],gb[5],gb[6],gb[7],gb[8],
 			    state, 1, move);
@@ -342,7 +441,12 @@ int play_ttt( bz_brain *b1, bz_chain *s1,
     if (movecount > MAX_TURNS) break;
     state = gbs (gb);
     for (i = 0; i < 9; i++) mask[i] = !(gb[i]);
-    move = bz_next_action (b2, state, mask, gamblers_ruin);
+#ifdef FLAT_EVSE
+    move = bz_nextaction (b2, state, NULL, mask, gamblers_ruin);
+#else
+    move = bz_nextaction (b2, state, &local_expval, mask, gamblers_ruin);
+#endif
+    
     if (showboards) printf ( "Board: %d%d%d%d%d%d%d%d%d S: %d P%d moves %d \n",
 	    gb[0],gb[1],gb[2],gb[3],gb[4],gb[5],gb[6],gb[7],gb[8],
 			     state, 2, move);
