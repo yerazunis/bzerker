@@ -105,6 +105,7 @@
 //     Things we gotta have!
 #include <stdio.h>
 #include <values.h>
+#include <string.h>
 
 /////////////////////////////////////////////////////////////////////
 //
@@ -156,12 +157,14 @@ typedef struct my_bz_brain {
 typedef struct bz__chel { // INTERNAL USE ONLY...chain element --> chel.
   long state;
   long action;
+  char *mask;
   struct bz__chel *next; 
 } bz__chel;
 
 typedef struct my_bz_chain {
-  long totalcount;
+  bz_brain *brain;
   bz__chel *chels;
+  long totalcount;
 } bz_chain;
 
 ////////////////////////////////////////////////////////////////////////
@@ -204,15 +207,15 @@ long bz_nextaction (
 
 bz_chain *bz_newchain (bz_brain *brain);
 
-int bz_addtochain (bz_chain *chain, long state, long action);
+void bz_addtochain (bz_chain *chain, long state, long action, char *mask);
 int bz_truncatechain (bz_chain *chain, long count);
-int bz_learnchain (bz_brain *brain,
+void bz_learnchain (bz_brain *brain,
 		   bz_chain *chain,
 		   float add,
 		   float multiply,
 		   int *on_empty);
-int bz_zerochain (bz_chain *chain);
-int bz_killchain (bz_chain *chain);
+void bz_zerochain (bz_chain *chain);
+void bz_killchain (bz_chain *chain);
 
 //    Internal use only.  Do not depend on this function
 //    being stable!  (note the double-underscore)

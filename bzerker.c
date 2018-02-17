@@ -409,16 +409,22 @@ bz_chain *bz_newchain (bz_brain *brain){
   mychain = malloc (sizeof (bz_chain));
   mychain->totalcount = 0;
   mychain->chels = NULL;
+  mychain->brain = brain;
   return mychain;
 }
 
 //   Add an action to the front of the chain for later learning
-int bz_addtochain (bz_chain *chain, long state, long action) {
+void bz_addtochain (bz_chain *chain, long state, long action, char *mask) {
   bz__chel *mychel;
   mychel = malloc (sizeof (bz__chel));
   mychel->state = state;
   mychel->action = action;
   mychel->next = chain->chels;
+  mychel->mask = NULL;
+  if (mask) {
+    mychel->mask = malloc (chain->brain->maxactions);
+    memcpy (mychel->mask, mask, chain->brain->maxactions);
+  }
   chain->chels = mychel;
   chain->totalcount ++;
   return;
@@ -446,6 +452,7 @@ int bz_truncatechain (bz_chain *chain, long count) {
   mychel = nextchel;   
   while (mychel) {
     nextchel = mychel -> next;
+    if (mychel->mask) free (mychel->mask);
     free (mychel);
     idropped++;
     mychel = nextchel;
@@ -453,7 +460,7 @@ int bz_truncatechain (bz_chain *chain, long count) {
   return (idropped);
 }
 
-int bz_learnstateaction (bz_brain *brain, int state, int action,
+int bz_learnstateaction (bz_brain *brain, int state, int action, char *mask,
 		    float add, float multiply, int *on_empty) {
   brain->states[brain->maxactions * state + action] =
     add +
@@ -478,22 +485,23 @@ int bz_learnstateaction (bz_brain *brain, int state, int action,
   }
 }
 
-int bz_learnchain (bz_brain *brain, bz_chain *chain,
+void bz_learnchain (bz_brain *brain, bz_chain *chain,
 		   float add, float multiply, int *on_empty) {
   bz__chel *thischel;
   thischel = chain->chels;
   while (thischel) {
     bz_learnstateaction (brain, thischel->state, thischel->action,
-			 add, multiply, on_empty);
+			 thischel->mask, add, multiply, on_empty);
     thischel = thischel->next;
   }
 }
 
-int bz_killchain (bz_chain *chain) {
+void bz_killchain (bz_chain *chain) {
   bz__chel *mychel, *nextchel;
   mychel = chain->chels;
   while (mychel) {
     nextchel = mychel -> next;
+    if (mychel->mask) free (mychel->mask);
     free (mychel);
     mychel = nextchel;
   }
@@ -502,7 +510,7 @@ int bz_killchain (bz_chain *chain) {
 
 //
 //    Don't call these unless you absolutely have to
-int bz__random_init (seed) {
+int bz__random_init (unsigned int seed) {
   srandom (seed);
 }
 

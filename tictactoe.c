@@ -449,7 +449,14 @@ bz_chain *chain1, *chain2;
 int gb[9]; // the game board
 int *gamblers_ruins;
 //   Some function definitions.
-main ()
+int play_ttt( bz_brain *b1, bz_chain *s1,
+	      bz_brain *b2, bz_chain *s2,
+	      int *gamblers_ruin);
+
+int execute_move (int square, int value);
+
+
+void main ()
 {
   printf ("Starting test 2 - learning tic-tac-toe\n");
   bz_init();
@@ -616,7 +623,7 @@ int play_ttt( bz_brain *b1, bz_chain *s1,
        mask[0],mask[1],mask[2],mask[3],mask[4],mask[5],mask[6],mask[7],mask[8]);
     //   execute the move (if it's illegal, take next legal one.)
     //    Yes, that's suboptimal.  GROT GROT GROT
-    bz_addtochain (s1, state, move);
+    bz_addtochain (s1, state, move, mask);
     // printf ("executing move\n");
     execute_move (move, 1);
     //  check, did someone win?  Exit the while-loop if they did!
@@ -639,7 +646,7 @@ int play_ttt( bz_brain *b1, bz_chain *s1,
     if (showboards) printf ("Mask:  %d%d%d%d%d%d%d%d%d \n",
        mask[0],mask[1],mask[2],mask[3],mask[4],mask[5],mask[6],mask[7],mask[8]);
     //  execute that move
-    bz_addtochain (s2, state, move);
+    bz_addtochain (s2, state, move, mask);
     execute_move (move, 2);
     //  did someone win?
     victor = victory();
@@ -668,7 +675,7 @@ int play_ttt( bz_brain *b1, bz_chain *s1,
 }
 
 //    Take a tic-tac-toe move- action is which square to mark, value is 1 or 2
-int execute_move (square, value) {
+int execute_move (int square, int value) {
   int i, sq, legal;
   legal = square;
   //fprintf (stderr, "%d", legal);
