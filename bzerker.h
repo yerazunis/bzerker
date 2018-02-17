@@ -219,12 +219,12 @@ int bz_prettyprint_block (bz_block  *block);
 bz_chain *bz_newchain (bz_brain *brain);
 
 int bz_addtochain (bz_chain *chain, long state, long action);
-
+int bz_truncatechain (bz_chain *chain, long count);
 int bz_learnchain (bz_brain *brain,
 		   bz_chain *chain,
 		   float add,
 		   float multiply,
-		   int on_empty);
+		   int *on_empty);
 int bz_zerochain (bz_chain *chain);
 int bz_killchain (bz_chain *chain);
 

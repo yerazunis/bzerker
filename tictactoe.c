@@ -70,6 +70,9 @@
 #define DRAW_MUL 1.0
 #endif
 
+
+
+
 //   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 2.0 EVSE
 //#define PLUSMINUS1OH1EVSE20
 #ifdef PLUSMINUS1OH1EVSE20
@@ -91,8 +94,8 @@
 //#define PLUSMINUS1OH1EVSE30
 #ifdef PLUSMINUS1OH1EVSE30
 #define TOKENS 100
-#define REPEATS   1000000
-#define BATCHSIZE 100000
+#define REPEATS   100000
+#define BATCHSIZE 10000
 //#define FLAT_EVSE 1
 #define EVSE 3.0
 #define WIN_ADD 1.0
@@ -103,15 +106,15 @@
 #define DRAW_MUL 1.0
 #endif
 
-//   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 4.0 EVSE
+//   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 5.0 EVSE
 //   It learns wicked fast now.
-#define PLUSMINUS1OH1EVSE40
+//#define PLUSMINUS1OH1EVSE40
 #ifdef PLUSMINUS1OH1EVSE40
 #define TOKENS 100
-#define REPEATS   1000000
-#define BATCHSIZE 100000
+#define REPEATS   100000
+#define BATCHSIZE 10000
 //#define FLAT_EVSE 1
-#define EVSE 4.0
+#define EVSE 5.0
 #define WIN_ADD 1.0
 #define WIN_MUL 1.0
 #define LOSE_ADD (-1.0)
@@ -119,6 +122,98 @@
 #define DRAW_ADD 0.1
 #define DRAW_MUL 1.0
 #endif
+
+
+//   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 5.0 EVSE
+//   It learns wicked fast now.
+//#define PLUSMINUS1OH1EVSE50
+#ifdef PLUSMINUS1OH1EVSE50
+#define TOKENS 100
+#define REPEATS   100000
+#define BATCHSIZE 10000
+//#define FLAT_EVSE 1
+#define EVSE 5.0
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+
+
+//   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 6.0 EVSE
+//   It learns wicked fast now, but not quite as well as 4.0 and 5.0 EVSE.
+//#define PLUSMINUS1OH1EVSE60
+#ifdef PLUSMINUS1OH1EVSE60
+#define TOKENS 100
+#define REPEATS   1000000
+#define BATCHSIZE 100000
+//#define FLAT_EVSE 1
+#define EVSE 6.0
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+
+
+//   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 7.0 EVSE
+//   It learns wicked fast now, and better than 6.0, (equal to 4 and 5)
+//#define PLUSMINUS1OH1EVSE70
+#ifdef PLUSMINUS1OH1EVSE70
+#define TOKENS 100
+#define REPEATS   100000
+#define BATCHSIZE 10000
+//#define FLAT_EVSE 1
+#define EVSE 7.0
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+
+
+//   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 8.0 EVSE
+//   It learns wicked fast now.
+//#define PLUSMINUS1OH1EVSE80
+#ifdef PLUSMINUS1OH1EVSE80
+#define TOKENS 100
+#define REPEATS   100000
+#define BATCHSIZE 10000
+//#define FLAT_EVSE 1
+#define EVSE 8.0
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+
+//   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 9.0 EVSE
+//   It learns wicked fast now...  and convergence is essentially complete,
+//   it converges to an endless series of games between two perfect players.
+#define PLUSMINUS1OH1EVSE90
+#ifdef PLUSMINUS1OH1EVSE90
+#define TOKENS 100
+#define REPEATS   10000000
+#define BATCHSIZE 1000000
+//#define FLAT_EVSE 1
+#define EVSE 9.0
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+
+
 
 
 //   Additive learns: +/-1 for win/lose, +0.01 for draw
@@ -407,16 +502,17 @@ int play_ttt( bz_brain *b1, bz_chain *s1,
     movecount++;
     //   get b1's next move
     state = gbs (gb);  // turn the gameboard into an integer "state"
-    for (i = 0; i < 9; i++) mask[i] = !(gb[i]);  //create a mask of legal moves
-    //
-    //   TEST - see if restricting first player move to a symmetry move helps
-    //   Results: with: 180k, 210K, 700K
-    //         without: 240k, 270K, 410K
-    //   Conclusion:  not a lot!
-    if (movecount == -1) {
-      for (i = 0; i < 9; i++) mask[i] = 0;
-      mask[0] = mask[1] = mask[4] = 1;
+    for (i = 0; i < 9; i++) {
+      mask[i] = gb[i] ? -1 : 1; // (gb[i]);  //create a mask of legal moves
     }
+    //  Shortcut - allow 1st move to be only NW corner, top side, or center
+//#define CANONICAL
+#ifdef CANONICAL
+    if (movecount == 0) {
+      mask [0] = mask[1] = mask[4] = 1;
+      mask [2] = mask[3] = mask[5] = mask[6] = mask[7] = mask[8] = -1;
+    }
+#endif
 #ifdef FLAT_EVSE
     move = bz_nextaction (b1, state, NULL, mask, gamblers_ruin);
 #else    
@@ -464,20 +560,20 @@ int play_ttt( bz_brain *b1, bz_chain *s1,
   	   gb[0],gb[1],gb[2],gb[3],gb[4],gb[5],gb[6],gb[7],gb[8]);
   if (victor == 1) {
     if (PRINT_EACHGAME) fprintf (stderr, "A");
-    bz_learnchain (b1, s1, WIN_ADD, WIN_MUL, 0);  //  add, then multiply
-    bz_learnchain (b2, s2, LOSE_ADD, LOSE_MUL, 0);
+    bz_learnchain (b1, s1, WIN_ADD, WIN_MUL, NULL);  //  add, then multiply
+    bz_learnchain (b2, s2, LOSE_ADD, LOSE_MUL, NULL);
     return 1 ;
   }
   if (victor == 2) {
     if (PRINT_EACHGAME) fprintf (stderr, "B");
-    bz_learnchain (b2, s2, WIN_ADD, WIN_MUL, 0);
-    bz_learnchain (b1, s1, LOSE_ADD, LOSE_MUL, 0);
+    bz_learnchain (b2, s2, WIN_ADD, WIN_MUL, NULL);
+    bz_learnchain (b1, s1, LOSE_ADD, LOSE_MUL, NULL);
     return 2;
   }
   //   No winner!
   if (PRINT_EACHGAME) fprintf (stderr, "X");
-  bz_learnchain (b2, s2, DRAW_ADD, DRAW_MUL, 0);
-  bz_learnchain (b1, s1, DRAW_ADD, DRAW_MUL, 0);
+  bz_learnchain (b2, s2, DRAW_ADD, DRAW_MUL, NULL);
+  bz_learnchain (b1, s1, DRAW_ADD, DRAW_MUL, NULL);
   return 0;
 }
 

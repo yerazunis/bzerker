@@ -388,6 +388,12 @@ long bz_nextaction (
   float sumup2;
   sumup2 = 0;
   float expval;
+
+  int maxacts;
+  maxacts = 0;
+  for (i = 0; i < brain->maxactions; i++) {
+    if (mask == NULL || mask[i] >= 0) maxacts++;
+  }
   
   expval = (evse == NULL) ? 1.0 : *evse;
   for (i = 0; i < brain->maxactions; i++) {
@@ -403,7 +409,7 @@ long bz_nextaction (
       if (mask == NULL || mask[i] >= 0 ) {
 	sumup2 += pow (
 		      (brain->states[cur_state]->actions[i] /
-		       (sumup/brain->maxactions)),
+		       (sumup / maxacts)),
 		      expval);  // always >= 0
       }
     }
@@ -429,7 +435,7 @@ long bz_nextaction (
     for (i = 0; i < brain->maxactions; i++) {
       if (mask == NULL || mask[i] >= 0) {
 	myrandom -= pow (brain->states[cur_state] -> actions[i]/
-			 (sumup/brain->maxactions), expval);
+			 (sumup / maxacts), expval);
 	if (myrandom <= 0) return (i);
       }
     }
@@ -527,12 +533,11 @@ int bz_truncatechain (bz_chain *chain, long count) {
   int icount;
   int idropped = 0;
   mychel = chain->chels;
-  //   Initial state- is this a nonempty bz_chain?
   if (mychel == NULL) return (0);
   //   Step thru the chain, counting "count" elements
   for (icount = 1; icount < count; icount++) {
     nextchel = mychel->next;
-    if (mychel == NULL) return (0);
+    if (nextchel == NULL) return (0);
     mychel = nextchel;
   }
   //  mychel_now is now pointing to the last good element.  Cut the
@@ -551,7 +556,7 @@ int bz_truncatechain (bz_chain *chain, long count) {
 }
 
 int bz_learnchain (bz_brain *brain, bz_chain *chain,
-		   float add, float multiply, int on_empty) {
+		   float add, float multiply, int *on_empty) {
   bz__chel *thischel;
   thischel = chain->chels;
   while (thischel) {
