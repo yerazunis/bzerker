@@ -104,11 +104,13 @@
 /////////////////////////////////////////////////////////////////////
 //     Things we gotta have!
 #include <stdio.h>
+#include <values.h>
 
 /////////////////////////////////////////////////////////////////////
 //
 //       The version.   Please change if you hack the code.
-#define BZ_VERSION_STRING "bzerker 20170523.WSY / First stake in the ground"
+//#define BZ_VERSION_STRING "bzerker 20170523.WSY / First stake in the ground"
+#define BZ_VERSION_STRING "bzerker 20180207.WSY / Oh, what we've learned!"
 
 /////////////////////////////////////////////////////////////////////
 //      trace message prefix
@@ -119,33 +121,38 @@
 /////////////////////////////////////////////////////////////////////////
 //
 #define BZ_BRAIN_QUANTIZED 0
- 
+
+////////////////////////////////////////////////////////////////////////
+//
+///     Magic constants
+#define TOKENMIN  (1000000*MINFLOAT)
+
+
 /////////////////////////////////////////////////////////////////////////
 //
 //      The typedefs
 //
 /////////////////////////////////////////////////////////////////////////
 
-typedef struct my_bz_state {
-  long len;
-  float *actions;   //   array of actions to be considered; note it's dense.
-                    //   Sparsity will be handled in another level.
-} bz_state;
+//typedef struct my_bz_state {
+//  long len;
+//  float *actions;   //   array of actions to be considered; note it's dense.
+//                    //   Sparsity will be handled in another level.
+//} bz_state;
 
+
+//  brains have states which are actually dense packed arrays.
+//  So, the offset within *state is [state * maxstates + actionnum]
 typedef struct my_bz_brain {
   int braintype;        //  0 = discrete,  >0 = ???
   int maxstates;
   int maxactions;
   int starting_tokens;
-  bz_state **states;  //  because C has only 1D dynarrays!
+  float *states;  //  because C has only 1D arrays, we collapse this densely
 } bz_brain;
 
-typedef struct my_bz_block {
-  long totalcount;
-  bz_brain *brain;
-  long *tokens;  //  1D array workaround
-} bz_block;
-
+//   Chain element for learning chains - much faster!  Like ten thousand
+//   times faster than blocks.
 typedef struct bz__chel { // INTERNAL USE ONLY...chain element --> chel.
   long state;
   long action;
@@ -182,9 +189,6 @@ bz_brain *bz_newbrain (
 //     Delete a brain back to free memory.
 int bz_killbrain (bz_brain *brain);
 
-//     block-style learning memory.
-bz_block *bz_newblock (bz_brain *brain);
-
 //     chain-style learning memory.
 bz_chain *bz_newchain (bz_brain *brain);
 
@@ -197,24 +201,6 @@ long bz_nextaction (
 		     char mask[],       // the set of allowed actions
 		     int *underflows    // optional underflows (incremented)
 		     );
-
-
-long bz_addtoblock (
-		    bz_block *block,
-		    int state,
-		    int action);
-
-long bz_learnblock (
-		   bz_brain *brain,
-		   bz_block *block,
-		   float tokens_add,
-		   float tokens_multiply,
-		   int on_empty);   // 
-
-int bz_zeroblock (bz_block *block);
-int bz_killblock (bz_block *block);
-  
-int bz_prettyprint_block (bz_block  *block);  
 
 bz_chain *bz_newchain (bz_brain *brain);
 
@@ -231,7 +217,3 @@ int bz_killchain (bz_chain *chain);
 //    Internal use only.  Do not depend on this function
 //    being stable!  (note the double-underscore)
 float bz__random (float max);
-
-
-  
-

@@ -198,13 +198,103 @@
 //   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 9.0 EVSE
 //   It learns wicked fast now...  and convergence is essentially complete,
 //   it converges to an endless series of games between two perfect players.
-#define PLUSMINUS1OH1EVSE90
+//#define PLUSMINUS1OH1EVSE90
 #ifdef PLUSMINUS1OH1EVSE90
+#define TOKENS 100
+#define REPEATS   50000
+#define BATCHSIZE 5000
+//#define FLAT_EVSE 1
+#define EVSE 9.0
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+
+
+//   Additive learns: +/-1 for win/lose, +0.1 for draw, with EVSE = 10.0
+//   Again, rapid convergence to a series of draws between two perfect
+//   players.
+#define PLUSMINUS1OH1EVSE100
+#ifdef PLUSMINUS1OH1EVSE100
+#define TOKENS 100
+#define REPEATS   1000000
+#define BATCHSIZE 100000
+//#define FLAT_EVSE 1
+#define EVSE 10.0
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+//   Additive learns: +/-1 for win/lose, +0.1 for draw, with EVSE = 11.0
+//   It starts out looking good, but then deteriorates into a usual P1 win.
+//#define PLUSMINUS1OH1EVSE110
+#ifdef PLUSMINUS1OH1EVSE110
+#define TOKENS 1000
+#define REPEATS   1000000
+#define BATCHSIZE 100000
+//#define FLAT_EVSE 1
+#define EVSE 11.0
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+
+//   Additive learns: +/-1 for win/lose, +0.1 for draw, with EVSE = 12.0
+//   We sorta converge, then lose convergence.   Unclear if we ever reach
+//   a steady state and if so, what that is.
+//#define PLUSMINUS1OH1EVSE120
+#ifdef PLUSMINUS1OH1EVSE120
 #define TOKENS 100
 #define REPEATS   10000000
 #define BATCHSIZE 1000000
 //#define FLAT_EVSE 1
-#define EVSE 9.0
+#define EVSE 12.0
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+
+
+//   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 15.0 EVSE
+//   Although we don't converge to the P1 win, we also don't converge
+//   to the draw-games.   
+//#define PLUSMINUS1OH1EVSE150
+#ifdef PLUSMINUS1OH1EVSE150
+#define TOKENS 100
+#define REPEATS   1000000
+#define BATCHSIZE 100000
+//#define FLAT_EVSE 1
+#define EVSE 15.0
+#define WIN_ADD 1.0
+#define WIN_MUL 1.0
+#define LOSE_ADD (-1.0)
+#define LOSE_MUL 1.0
+#define DRAW_ADD 0.1
+#define DRAW_MUL 1.0
+#endif
+
+//   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 20.0 EVSE
+//   This just goes that there can be too much of a good thing; at 20
+//   we don't converge any mor
+//#define PLUSMINUS1OH1EVSE200
+#ifdef PLUSMINUS1OH1EVSE200
+#define TOKENS 100
+#define REPEATS   1000000
+#define BATCHSIZE 100000
+//#define FLAT_EVSE 1
+#define EVSE 20.0
 #define WIN_ADD 1.0
 #define WIN_MUL 1.0
 #define LOSE_ADD (-1.0)
@@ -374,7 +464,7 @@ main ()
   printf ("\nLearning coeffs: Explore vs Exploit: %f\n Add    Mul \n  W: %f %f\n  L: %f %f\n  D: %f %f \n",
 	  EVSE, WIN_MUL, WIN_ADD, LOSE_MUL, LOSE_ADD, DRAW_MUL, DRAW_ADD );
 	  //WIN_MUL, WIN_ADD, LOSE_MUL, LOSE_ADD, DRAW_MUL, DRAW_ADD );
-  
+
   int reps, i, j, action, batch;
   action = 0;
   int log_0 [REPEATS/BATCHSIZE];

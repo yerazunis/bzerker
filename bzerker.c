@@ -33,8 +33,12 @@
 //          (*) if there are no tokens left in the box, either
 //              resign the game OR
 //              put in a new batch of tokens, and pick one randomly.
+//          (*) For variouis values of "random".   Changing the weighting
+//              can accellerate learning by several orders of magnitude.
+//              This is the whole K-armed-bandit (a.k.a. explore vs. exploit)
+//              issue in machine learning.
 //
-//    LEARN: once the game is over and we know how well we did:
+//    LEARN: once we know how well we did:
 //          for each token that was "in use":
 //             if we did well, add one or more additional tokens of that
 //                type, how many depends on how well we did.
@@ -55,7 +59,8 @@
 //   Note that this algorithm does NOT use backpropagation, merely end-to-end
 //   acceptability for an enumerated set of moves.   Note also that in
 //   the limit of a very large number of training passes and single-turn
-//   games, the algorithm convergs to the K-nearest-neighbor answer.
+//   games, the algorithm convergs to the K-nearest-neighbor answer, which
+//   at least implies stochastic approach to within epsilon of perfection.
 //
 //   For convenience and disambiguation, all user-recommended bzerker names
 //   start with "bz_".   Internal-use-only names (internal because they may
@@ -283,20 +288,15 @@ bz_brain *bz_newbrain (	     int braintype,
   my_brain->maxstates = max_states;
   my_brain->maxactions = max_actions;
   my_brain->starting_tokens = tokens_per_node;  //  Used during out-of-token refills
-  //    Make the boxes array (which is an array of pointers)
-  my_brain->states = (bz_state **) malloc (max_states * sizeof (bz_state *));  
+  //    Make the boxes array (which is an array of ints)
+  my_brain->states= (float *) malloc(sizeof(float) * max_states * max_actions);
   //    Now fill in the boxes.   This is a dense, discrete brain.
   //     Sparse brains will come later, if ever.
-  int istate;
-  //    Enumerate each of the allowed states, and put the boxes in each
+  int istate, iaction;
+  //    Enumerate each of the allowed states, and init the boxes in each
   for (istate = 0; istate < max_states; istate++) {
-    my_brain->states[istate] = (bz_state *) malloc (sizeof (bz_state));
-    my_brain->states[istate]->len = max_actions;
-    my_brain->states[istate]->actions =
-      (float *) malloc(max_actions * sizeof (float));
-    int iaction;
     for (iaction = 0; iaction < max_actions; iaction++) {
-      my_brain->states[istate]-> actions[iaction] = tokens_per_node;
+      my_brain->states[istate * max_actions + iaction] = tokens_per_node;
     }
   }
   return (my_brain);
@@ -311,60 +311,8 @@ int bz_killbrain (bz_brain *brain)
   if (bz_tracemode) {
     fprintf (stderr, "%s%s", BZ_TRACEPREFIX, "killbrain called\n"); 
   }
-  long i;
-  for (i = 0; i < brain->maxstates; i++) {
-    free (brain->states[i]->actions);
-    free (brain->states[i]);
-  }
+  free (brain->states);
   free (brain);
-}
-
-//    Operators on an action "block" - assumption of dense action sets here!!!
-//    Instead of a linked list, a block is a fixed length array of
-//    the maximum length ever possibly needed (so it's really ~same size as
-//    a brain array).
-//
-//    We may choose to revisit this in the future... it may be better to
-//    convert this to a linked list representation.  Or, convert a brain to
-//    *this* representation to get rid of all of the pointers-to-pointers.
-//    Or implement both, or something.
-//
-bz_block *bz_newblock (bz_brain *brain)  
-{
-  if (bz_tracemode) {
-    fprintf (stderr, "%s%s", BZ_TRACEPREFIX, "newblock called\n"); 
-  }
-  bz_block *my_block;
-  my_block = (bz_block *) malloc ( sizeof (bz_block));
-  my_block->totalcount = 0;
-  my_block->brain = brain;
-  long maxtokens;
-  maxtokens = brain->maxstates * brain->maxactions;
-  my_block->tokens = (long *) malloc (maxtokens * sizeof (long));
-  return my_block;
-}
-
-int bz_zeroblock (bz_block *block) {
-  long i;
-  for (i = 0; i <(block->brain->maxstates * block->brain->maxactions); i++) {
-    block->tokens[i] = 0;
-  }
-}
-
-//     
-int bz_killblock (bz_block *block) {
-  if (bz_tracemode) {
-    fprintf (stderr, "%s%s", BZ_TRACEPREFIX, "killblock called\n"); 
-  }
-  free (block->tokens);
-  free (block);
-}
-
-int bz_prettyprint_block (bz_block *block){
-  int i;
-  for (i = 0; i < block->brain->maxstates * block->brain->maxactions; i++) {
-    if (block->tokens[i] > 0) printf ("condition: %d  count %d \n", i, block->tokens[i]);
-  }
 }
 
 //
@@ -401,16 +349,15 @@ long bz_nextaction (
     //   we'll be sucking mud because C doesn't usually check subscripts.
     //
     if (mask == NULL || mask[i] >= 0) {
-	sumup += brain->states [cur_state]->actions[i];
+      sumup += brain->states [brain->maxactions * cur_state + i];
     }
   }
   if (evse) {
     for (i = 0; i < brain->maxactions; i++) {
       if (mask == NULL || mask[i] >= 0 ) {
-	sumup2 += pow (
-		      (brain->states[cur_state]->actions[i] /
-		       (sumup / maxacts)),
-		      expval);  // always >= 0
+	sumup2 += pow ((brain->states[cur_state * brain->maxactions + i] /
+			(sumup / maxacts)),
+		       expval);  // always >= 0
       }
     }
   }
@@ -424,7 +371,8 @@ long bz_nextaction (
     if (underflows) { (*underflows)++;}
     for (i = 0; i < brain->maxactions; i++) {
       if (mask == NULL || mask[i] >= 0)
-	brain->states[cur_state]->actions[i] = brain->starting_tokens;
+	brain->states[brain->maxactions * cur_state + i] =
+	  brain->starting_tokens;
     }
     sumup = brain->maxactions * brain->starting_tokens;
     sumup2 = brain->maxactions;
@@ -434,16 +382,16 @@ long bz_nextaction (
     myrandom = bz__random (sumup2);
     for (i = 0; i < brain->maxactions; i++) {
       if (mask == NULL || mask[i] >= 0) {
-	myrandom -= pow (brain->states[cur_state] -> actions[i]/
+	myrandom -= pow (brain->states[brain->maxactions * cur_state + i] /
 			 (sumup / maxacts), expval);
-	if (myrandom <= 0) return (i);
+	if (myrandom <= 0) return (i);   
       }
     }
   } else {
     myrandom = bz__random (sumup);
     for (i = 0; i < brain->maxactions; i++) {
       if (mask == NULL || mask[i] >= 0) {
-	myrandom -= brain->states [cur_state] -> actions[i] ;
+	myrandom -= brain->states[brain->maxactions * cur_state + i];
 	if (myrandom <= 0) return (i);
       }
     }
@@ -451,57 +399,7 @@ long bz_nextaction (
   return 0;
 }
 
-long bz_addtoblock (
-		    bz_block *block,
-		    int state,
-		    int action)
-{
-  if (bz_tracemode) fprintf (stderr, "bz_add_action start\n");
-  block->totalcount = block->totalcount + 1;
-  long offset;
-  offset = (state * (block->brain->maxactions)) + action;
-  //printf ("bz_add_action offset is %d\n", offset);
-  block->tokens[offset] ++;  
-}
-
-long bz_learnblock (
-		   bz_brain *brain,
-		   bz_block *block,
-		   float tokens_add,
-		   float tokens_multiply,
-		   int on_empty)
-{
-  if (bz_tracemode) {
-    fprintf (stderr, "%s%s", BZ_TRACEPREFIX, "learn_block called\n"); 
-  }
-  if (brain == NULL) {
-    fprintf (stderr, "Null brain in learn!  Skipping.");
-    return (1);
-  }
-  if (block == NULL) {
-    fprintf (stderr, "Null block in learn!  Skipping.");
-    return (1);
-  }
-  int state, action, seroff;
-  for (state = 0; state < brain->maxstates; state++) {
-    for (action = 0; action < brain->maxactions; action++) {
-      seroff = state * (block->brain->maxactions) + action;
-      //  multiply, then add (fractions allowed!)
-      //fprintf (stderr, "state: %d  %f -->",
-      //	 state, brain->boxes[state]->actions[action]);
-      brain->states[state]->actions[action] =
-	tokens_add +
-	(tokens_multiply * (brain->states[state]->actions[action]));
-      //  zero check - no negativity allowed!
-      if (brain->states[state]->actions[action] < 0) {
-	brain->states[state]->actions[action] = 0;
-      } 
-    }
-  }
-  return (0);
-}
-
-//    Chains are a different way to do learnable recordings; a block
+//    Chains are a way to do learnable recordings; a block
 //    is a fixed-size array but a chain is a linked list.  You're trading
 //    off malloc/free time versus time to scan an entire struct the size of
 //    the "brain".
@@ -555,18 +453,38 @@ int bz_truncatechain (bz_chain *chain, long count) {
   return (idropped);
 }
 
+int bz_learnstateaction (bz_brain *brain, int state, int action,
+		    float add, float multiply, int *on_empty) {
+  brain->states[brain->maxactions * state + action] =
+    add +
+    multiply * brain->states[brain->maxactions * state + action];
+  //  zero check - no negativity allowed, nor zero sum states!
+  if (brain->states[brain->maxactions * state + action] <= TOKENMIN ) {
+    brain->states[brain->maxactions * state + action] = TOKENMIN;
+#ifdef NEVERMORE
+    //   Don't need this any more, as long as TOKENMIN is > 0
+    int iac;
+    //  GROT GROT GROT How do we deal with changing masks!?!?!?
+    float tokensum;
+    tokensum = 0;
+    for (iac = 0; iac < brain->maxactions; iac++) {
+      tokensum += brain->states[brain->maxactions * state + iac];
+    }
+    if (tokensum <= 0) {
+      for (iac = 0; iac < brain->maxactions; iac++)
+	brain->states[brain->maxactions *state + iac]=brain->starting_tokens;
+    }
+#endif
+  }
+}
+
 int bz_learnchain (bz_brain *brain, bz_chain *chain,
 		   float add, float multiply, int *on_empty) {
   bz__chel *thischel;
   thischel = chain->chels;
   while (thischel) {
-    brain->states[thischel->state]->actions[thischel->action] =
-      add +
-      (multiply * (brain->states[thischel->state]->actions[thischel->action]));
-    //  zero check - no negativity allowed!
-    if (brain->states[thischel->state]->actions[thischel->action] < 0) {
-      brain->states[thischel->state]->actions[thischel->action] = 0; 
-    }
+    bz_learnstateaction (brain, thischel->state, thischel->action,
+			 add, multiply, on_empty);
     thischel = thischel->next;
   }
 }
