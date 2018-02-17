@@ -12,9 +12,9 @@ all: libbzerker
 libbzerker: bzerker.c bzerker.h
 #	cc DEBUG_FLAG bzerker.c
 
-balltrack: bzerker.c bzerker.h balltrack.c
-	cc bzerker.c balltrack.c -lm -o balltrack
+balltrack: bzerker.c bzerker.h balltrack.c balltrack.h
+	cc $(DEBUG_FLAG) bzerker.c balltrack.c -lm -o balltrack
 
-tictactoe: bzerker.c tictactoe.c  bzerker.h
+tictactoe: bzerker.c bzerker.h tictactoe.c
 	cc $(DEBUG_FLAG) bzerker.c tictactoe.c -lm -o tictactoe
 
