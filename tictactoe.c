@@ -38,7 +38,7 @@
 //     otherwise #define expansions my act weird!
 
 //   Additive learns: +/-1 for win/lose, +0.1 for draw
-#define PLUSMINUS1OH1
+//#define PLUSMINUS1OH1
 #ifdef PLUSMINUS1OH1
 #define TOKENS 100
 #define REPEATS   5000000
@@ -126,7 +126,7 @@
 
 //   Additive learns: +/-1 for win/lose, +0.1 for draw, but with 5.0 EVSE
 //   It learns wicked fast now.
-//#define PLUSMINUS1OH1EVSE50
+#define PLUSMINUS1OH1EVSE50
 #ifdef PLUSMINUS1OH1EVSE50
 #define TOKENS 100
 #define REPEATS   100000

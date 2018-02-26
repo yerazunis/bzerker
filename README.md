@@ -18,7 +18,8 @@ STATEs are utterly "blind" - any way to map your system or physical
 configuation into unique numbered states is perfectly valid.  
 Similarly, ACTIONs are "blind" - any numbering of possible actions
 to take, starting at 0, will work.   Right now, sparse ACTIONS are 
-permitted (via the MASK vector) but STATEs are still dense.
+permitted (via the MASK vector) but STATEs are still dense and
+still use storage.
 
 Because of the extreme simplicity of the algorithm, it is wicked 
 fast to run any particular instance of STATE and get
@@ -45,7 +46,7 @@ game; "gambler's ruin" dominates the system (i.e. ten losses for
 each action in each state mean _no_ action is statistically "good" 
 and so to avoid this kind of underflow, we reset such states back 
 to the initial loading.  However, this means that statistically valid
-models don't survive and we never actually learn (or converge)
+models don't survive and we never actually learn (or converge).
 
 Going with 100 units of liklihood, we learn in about 1 million 
 games (and take about four seconds), and with 1000 units of 
@@ -61,7 +62,7 @@ considered a loss to player 2, then it's a forced win for player
 tic-tac-toe with a 0 reward for draw.  The usual contest-style
 point system (1 point for win, 0 point for lose, 1/2 point for
 draw) gives the expected result, but slowly as losing strategies
-are never "punished".   But, +1 for win, -1 for lose, and +0,01
+are never "punished".   But, +1 for win, -1 for lose, and +0.01
 for draw converges quickly.
 
 Realize that your reward function does not have to be zero-sum.
@@ -69,7 +70,39 @@ Empirically, it seems that learning can be faster if it is NOT
 zero-sum; I don't know why this is.
 
 So, it's not perfect, you have to think carefully about your 
-reward function, but it _is_ fast.   
+reward function, but it _is_ fast.
+
+Improvement #1 over Michie's algorithm:  add nonlinearity!
+More specifically, if when you call bz_nextaction, you specify
+*evse (rather than leaving it NULL) then an exponential
+probability weighting is applied to the choice of next action;
+specifically the numerical weights raised to the evse power.
+
+For example, say the current ratio of units of likelihood 
+tokens between taking action 0 and action 1 and action 2
+is 1 : 2 : 3 (for example, 100 tokens, 200 tokens, and 300
+tokens).  With *evse NULL, then the probabilities of those
+actions stay at 1 : 2 : 3.   With evse = &(1.00) again the
+actions probabilities are 1 : 2 : 3.
+
+But let's crank evse up to 2.  Then the ratios become
+1*1 : 2*2 : 3*3 which is 1 : 4 : 9, which strongly favors
+the "better" 300 token choice.
+
+It turns out that this improves the speed of convergence, but
+evse values both much larger and much smaller than 1 are useful.
+Experimentally, an evse of 5 (specified as "& (5.0)" ) will
+the clock-speed of convergence for tic-tac-toe by about 10x,
+and do it in 1/100th as many learning cycles (exponentiation is
+"computationally expensive" compared to the entire rest of the
+Michie algorithm or the actual tic-tac-toe game evaluator.
+
+Interestingly, evse can be "too big" - an evse over 10 will
+often _not_ converge.
+
+Point to explore in future work:  How does evse map to the
+multi-armed bandit problem (and the Gittens index, as
+Wikipedia puts it).
 
 Enjoy.
 
