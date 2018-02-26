@@ -468,20 +468,22 @@ int bz_learnstateaction (bz_brain *brain, int state, int action, char *mask,
   //  zero check - no negativity allowed, nor zero sum states!
   if (brain->states[brain->maxactions * state + action] <= TOKENMIN ) {
     brain->states[brain->maxactions * state + action] = TOKENMIN;
-#ifdef NEVERMORE
-    //   Don't need this any more, as long as TOKENMIN is > 0
+    //   questionable if we need this any more, as long as TOKENMIN is > 0
     int iac;
-    //  GROT GROT GROT How do we deal with changing masks!?!?!?
     float tokensum;
     tokensum = 0;
     for (iac = 0; iac < brain->maxactions; iac++) {
-      tokensum += brain->states[brain->maxactions * state + iac];
+      if (mask) {
+	if (mask[iac] > 0)
+	  	tokensum += brain->states[brain->maxactions * state + iac];
+      } else {
+	tokensum += brain->states[brain->maxactions * state + iac];
+      }
     }
-    if (tokensum <= 0) {
+    if (tokensum <= TOKENMIN * brain->maxactions * brain->maxactions) {
       for (iac = 0; iac < brain->maxactions; iac++)
 	brain->states[brain->maxactions *state + iac]=brain->starting_tokens;
     }
-#endif
   }
 }
 

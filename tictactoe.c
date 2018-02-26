@@ -38,11 +38,11 @@
 //     otherwise #define expansions my act weird!
 
 //   Additive learns: +/-1 for win/lose, +0.1 for draw
-//#define PLUSMINUS1OH1
+#define PLUSMINUS1OH1
 #ifdef PLUSMINUS1OH1
 #define TOKENS 100
-#define REPEATS   1000000
-#define BATCHSIZE 100000
+#define REPEATS   5000000
+#define BATCHSIZE 500000
 #define FLAT_EVSE 1
 #define EVSE 1.00
 #define WIN_ADD 1.0
@@ -217,7 +217,7 @@
 //   Additive learns: +/-1 for win/lose, +0.1 for draw, with EVSE = 10.0
 //   Again, rapid convergence to a series of draws between two perfect
 //   players.
-#define PLUSMINUS1OH1EVSE100
+//#define PLUSMINUS1OH1EVSE100
 #ifdef PLUSMINUS1OH1EVSE100
 #define TOKENS 100
 #define REPEATS   1000000
