@@ -96,18 +96,22 @@ void move_track_one_timestep (int track_cmd) {
   float track_angrange, track_setpoint;
   track_angrange = TRACKANGMAX - TRACKANGMIN;
   //   translate track_cmd (an int, 0 to ACTIONS-1) into radians
-  track_setpoint = (track_cmd * (track_angrange / ACTIONS)) + TRACKANGMIN;
+  track_setpoint = (track_cmd * (track_angrange / ((float)ACTIONS - 1)))
+    + TRACKANGMIN;
+  printf ("TSP: %f\n", track_setpoint);
   //  are we close enough to just move there?
-  if (abs (track_setpoint - track_ang) < (TRACK_SLEW_RATE / TIMESTEP)) {
+  if ((fabs (track_setpoint - track_ang)) < (TRACK_SLEW_RATE * TIMESTEP)) {
     track_ang = track_setpoint;
-  }
+    printf ("TA=TSP\n");
+  } else {
   //  No, we can't get to setpoint in one step.  We should take one
   //  step worth closer
-  else {
+        printf ("TAstep\n");
+
     if (track_setpoint > track_ang) {
-      track_ang += (TRACK_SLEW_RATE / TIMESTEP);
+      track_ang += (TRACK_SLEW_RATE * TIMESTEP);
     } else {
-      track_ang -= (TRACK_SLEW_RATE / TIMESTEP);
+      track_ang -= (TRACK_SLEW_RATE * TIMESTEP);
     }
   }
   return;
@@ -218,18 +222,19 @@ void update_reward () {
 }
 				      
 
-main ()
+void main ()
 {
   printf ("Starting Ball and Track test - balancing a ball\n");
   bz_init();
   printf ("Important Params:");
   printf ("  Timestep: %f, State History Visible: %d steps.\n", TIMESTEP, TVIS);
   printf ("  Quantization:  ball pos %d states,  track ang %d states.\n", NBALLQ, NTRACKQ);
+  printf ("  Total States: %d \n", STATES );
   
   printf (" Initializing the brain.\n");
   bz_brain *brain1;
   brain1 = bz_newbrain (BZ_BRAIN_QUANTIZED, STATES, ACTIONS, TOKENS);
-  printf ("Got brains! pointer is %lx\n",(long) brain1);
+  printf ("Got brains! pointer is 0x%lx\n", (long) brain1);
   bz_chain *chain1;
   chain1 = bz_newchain (brain1);
   
@@ -254,6 +259,8 @@ main ()
   //   Loop for REPEAT reps
   for (reps = 0; reps < REPEATS; reps++){
     //   1)  move the track
+    printf ("TC?  ");  fflush (stdout);
+    scanf ("%d", &track_cmd);
     move_track_one_timestep (track_cmd);   //  GROT FROM WHERE DO WE GET THIS?
     //   2)  move the ball
     move_ball_one_timestep ();
@@ -265,7 +272,7 @@ main ()
     update_reward ();
     //   6)  train the brain (if we should)
     que_to_quan_state();
-    bz_addtochain (chain1, quan_state, track_cmd);    // remember what we did
+    bz_addtochain (chain1, quan_state, track_cmd, NULL);    // remember what we did
     bz_truncatechain (chain1, TVIS); //  .... but only for our memory step length
     //       ... only train if we've actually filled the queues
     if (reps > TVIS) {
@@ -274,7 +281,7 @@ main ()
     //   7)  ask the brain what to do next
     track_cmd = bz_nextaction (brain1, quan_state, NULL, NULL, NULL);
     //   8)   record statistics and output trace 
-    printf ("Ang: %f  BallX: %f  BallV: %f  ErrDist: %f  Score: %f\n",
-	    track_ang, ball_x, ball_v, BALL_SETPOINT - ball_x, cur_reward); 
+    printf ("TC: %d  A: %f  X: %f  V: %f  Err: %f  Score: %f\n",
+	    track_cmd, track_ang, ball_x, ball_v, BALL_SETPOINT - ball_x, cur_reward); 
   }  
 }

@@ -25,6 +25,7 @@
 //    usable by the algorithm.
 //
 //   timestep size (seconds)
+// #define TIMESTEP 0.0333
 #define TIMESTEP 0.0333
 //
 //      Track Parameters (length in meters, tilt in radians)
@@ -33,16 +34,13 @@
 #define TRACKANGMIN (-0.2)
 #define TRACKANGMAX (0.2)
 //
-//   amount that an action commands the track (radians / second)
-#define TRACK_SLEW 0.5
-//
 //   The current "real" state of the track, in radians (0 = horizontal)
 //   and velocity (in radians/sec)
 float track_ang, track_v;
 int quantized_track_ang ;
 #define INITIAL_TRACK_ANGLE 0.0
 #define INITIAL_TRACK_VEL 0.0
-#define TRACK_SLEW_RATE 2.0 
+#define TRACK_SLEW_RATE 0.50 
 
 #define INITIAL_BALL_X 0.0
 #define INITIAL_BALL_V 0.0
@@ -54,9 +52,9 @@ int quantized_ball_x;
 //    Mass of the ball (we normalize to 1.0 Kg right now)
 #define BALL_MASS 1.0
 //   amount of noise (perturbation) applied to the "real" ball, in Newtons
-#define BALL_NOISE 0.010
+#define BALL_NOISE 0.0001
 //   amount of measurement noise (jitter) applied to ball, each timestep
-#define BALL_JITTER 0.010
+#define BALL_JITTER 0.001
 //   coefficient of restitution - how fast does the ball recoil when it
 //   hits the stops at 0 and TRACKLEN?
 #define BALL_BOUNCE 0.5
@@ -76,9 +74,9 @@ int quantized_ball_x;
 //   number of rail position quantization states
 #define NTRACKQ 5
 //   number of previous positions visible to the BZERKER algorithm
-#define TVIS 5
+#define TVIS 1
 //   number of total states visible to BZERKER 
-#define STATES (NBALLQ*NTRACKQ*TVIS)
+#define STATES ((int)(pow((NBALLQ*NTRACKQ),TVIS)))
 //   number of possible actions to take - tilt to left, center, or right.
 #define ACTIONS 3
 
@@ -92,7 +90,7 @@ long unsigned quan_state;
 //   how many tokens per Michie box
 #define TOKENS 100
 //   how many cycles of the game to run
-#define REPEATS   100000
+#define REPEATS   500
 //   batch size (statistics gathering only)
 #define BATCHSIZE 10000
 //   reward params for the boxes (default at least)

@@ -95,7 +95,7 @@
 //
 //   First, pop open bzerker.h and look at the declarations there.
 //
-//   Then, if you like, read one of the bzerker_testN.c programs.
+//   Then, if you like, read one of the demo .c programs.
 //
 //   Then, the basic (recommended) program structure is:
 //     initialize the package:
