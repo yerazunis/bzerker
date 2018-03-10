@@ -18,15 +18,15 @@
 //    rotational inertia, which can be mirrored to linear inertia in
 //    the case of an uncurved linear track.
 //
-//    Values are all in SI units - meters/kilos/seconds/radians, unless noted.
+//    Values are all in SI units - meters/kg/seconds/radians, unless noted.
 //
 //    First, we define the (hidden) physical model, then the
 //    quantization that maps this hidden model into a set of states
 //    usable by the algorithm.
 //
 //   timestep size (seconds)
-// #define TIMESTEP 0.0333
 #define TIMESTEP 0.0333
+//#define TIMESTEP 0.2
 //
 //      Track Parameters (length in meters, tilt in radians)
 //
@@ -40,7 +40,7 @@ float track_ang, track_v;
 int quantized_track_ang ;
 #define INITIAL_TRACK_ANGLE 0.0
 #define INITIAL_TRACK_VEL 0.0
-#define TRACK_SLEW_RATE 0.50 
+#define TRACK_SLEW_RATE 1.0 
 
 #define INITIAL_BALL_X 0.0
 #define INITIAL_BALL_V 0.0
@@ -72,6 +72,8 @@ int quantized_ball_x;
 //   number of ball position quantization states
 #define NBALLQ 5
 //   number of rail position quantization states
+//    NB: the rail can be commanded to ACTIONS locations; this
+//        is the feedback of where the rail is right now.
 #define NTRACKQ 5
 //   number of previous positions visible to the BZERKER algorithm
 #define TVIS 1

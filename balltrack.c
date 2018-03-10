@@ -131,12 +131,13 @@ void move_ball_one_timestep () {
   if (ball_v < BALL_VEL_FRIC_THRESH) {
     //   static friction case
     ballforce += (BALL_MASS * BALL_STATIC_FRIC)
-      * (ball_v > 0.00) ? -1 : +1;    //  friction switches direction
+      * ((ball_v > 0.00) ? -1 : +1);    //  friction switches direction
   } else {
     //   dynamic friction case
     ballforce += (BALL_MASS * BALL_DYN_FRIC)
-      * (ball_v > 0.00) ? -1 : +1;    //  friction switches direction!
+      * ((ball_v > 0.00) ? -1 : +1);    //  friction switches direction!
   }
+  printf ("BallForce: %f\n", ballforce);
   ///////////////////////////////////////////////
   //    Part 2:  Integrate.   Force = mass * accelleration
   //    so accelleration = force/mass, delta-v = accel * timestep
@@ -169,8 +170,12 @@ void move_ball_one_timestep () {
 //     of position.  Ain't that cool!  :-)
 void set_quantized_values () {
   //  Track angle
-  quantized_track_ang = (int) ((track_ang - TRACKANGMIN) * NTRACKQ)
-    / (TRACKANGMAX - TRACKANGMIN);  
+  quantized_track_ang =  NTRACKQ * (
+			       (track_ang - TRACKANGMIN)
+			       / (TRACKANGMAX - TRACKANGMIN));
+			       
+    //			       ((track_ang - TRACKANGMIN) * (NTRACKQ + 1))
+    //			       / (TRACKANGMAX - TRACKANGMIN));  
   //  Ball position
   quantized_ball_x = (int) ((ball_x ) *  NBALLQ) / (TRACKLEN);
 }
@@ -259,8 +264,9 @@ void main ()
   //   Loop for REPEAT reps
   for (reps = 0; reps < REPEATS; reps++){
     //   1)  move the track
-    printf ("TC?  ");  fflush (stdout);
-    scanf ("%d", &track_cmd);
+    //printf ("TC?  ");  fflush (stdout);
+    //scanf ("%d", &track_cmd);
+    track_cmd = 2;
     move_track_one_timestep (track_cmd);   //  GROT FROM WHERE DO WE GET THIS?
     //   2)  move the ball
     move_ball_one_timestep ();
@@ -281,7 +287,9 @@ void main ()
     //   7)  ask the brain what to do next
     track_cmd = bz_nextaction (brain1, quan_state, NULL, NULL, NULL);
     //   8)   record statistics and output trace 
-    printf ("TC: %d  A: %f  X: %f  V: %f  Err: %f  Score: %f\n",
-	    track_cmd, track_ang, ball_x, ball_v, BALL_SETPOINT - ball_x, cur_reward); 
+    printf ("TC: %d  A: %f  X: %f  V: %f BQ: %d  TQ: %d  Err: %f  Score: %f\n",
+	    track_cmd, track_ang, ball_x, ball_v,
+	    quantized_ball_x, quantized_track_ang,
+	    BALL_SETPOINT - ball_x, cur_reward); 
   }  
 }
