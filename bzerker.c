@@ -416,6 +416,12 @@ bz_chain *bz_newchain (bz_brain *brain){
 //   Add an action to the front of the chain for later learning
 void bz_addtochain (bz_chain *chain, long state, long action, char *mask) {
   bz__chel *mychel;
+  if (state >= chain->brain->maxstates)
+    fprintf (stderr,
+	     "State value too high for this brain!  Got %d, range for this brain is 0 to %d \n", state, chain->brain->maxstates-1 );
+  if (action >= chain->brain->maxactions)
+    fprintf (stderr,
+	     "Action value too high for this brain!  Got %d, max for this brain is 0 to %d \n", action, chain->brain->maxactions-1 );
   mychel = malloc (sizeof (bz__chel));
   mychel->state = state;
   mychel->action = action;
@@ -433,18 +439,19 @@ void bz_addtochain (bz_chain *chain, long state, long action, char *mask) {
 //    Truncate a chain to be no longer than "count" actions long
 //    and return the number of actions dropped
 int bz_truncatechain (bz_chain *chain, long count) {
-  bz__chel *mychel, *nextchel; // need to to follow the chain
+  bz__chel *mychel, *nextchel; // need to to follow the CHain ELements ("chel")
   int icount;
   int idropped = 0;
+  if (chain == NULL) return (0);
+  if (chain->chels == NULL) return (0);
   mychel = chain->chels;
   if (mychel == NULL) return (0);
   //   Step thru the chain, counting "count" elements
-  for (icount = 1; icount < count; icount++) {
-    nextchel = mychel->next;
-    if (nextchel == NULL) return (0);
-    mychel = nextchel;
+  for (icount = 0; icount < count; icount++) {
+    if (mychel->next == NULL) return (0);
+    mychel = mychel->next;
   }
-  //  mychel_now is now pointing to the last good element.  Cut the
+  //  mychel is now pointing to the last good element.  Cut the
   //  chain but hold onto the free end of to-be-deleted elements!
   nextchel = mychel->next;
   mychel->next = NULL;

@@ -98,15 +98,14 @@ void move_track_one_timestep (int track_cmd) {
   //   translate track_cmd (an int, 0 to ACTIONS-1) into radians
   track_setpoint = (track_cmd * (track_angrange / ((float)ACTIONS - 1)))
     + TRACKANGMIN;
-  printf ("TSP: %f\n", track_setpoint);
   //  are we close enough to just move there?
   if ((fabs (track_setpoint - track_ang)) < (TRACK_SLEW_RATE * TIMESTEP)) {
     track_ang = track_setpoint;
-    printf ("TA=TSP\n");
+    //printf ("TA=TSP\n");
   } else {
   //  No, we can't get to setpoint in one step.  We should take one
   //  step worth closer
-        printf ("TAstep\n");
+  //  printf ("TAstep\n");
 
     if (track_setpoint > track_ang) {
       track_ang += (TRACK_SLEW_RATE * TIMESTEP);
@@ -137,7 +136,7 @@ void move_ball_one_timestep () {
     ballforce += (BALL_MASS * BALL_DYN_FRIC)
       * ((ball_v > 0.00) ? -1 : +1);    //  friction switches direction!
   }
-  printf ("BallForce: %f\n", ballforce);
+  //  printf ("BallForce: %f\n", ballforce);
   ///////////////////////////////////////////////
   //    Part 2:  Integrate.   Force = mass * accelleration
   //    so accelleration = force/mass, delta-v = accel * timestep
@@ -151,12 +150,12 @@ void move_ball_one_timestep () {
     //    yes, this isn't exactly right; should break the motion into
     //    two phases, pre-impact and post-impact, but for small timesteps
     //    this is close enough.
-    ball_x = -(ball_x * BALL_BOUNCE);
+    ball_x = 0.00;
     ball_v = -(ball_v * BALL_BOUNCE);
   }
   ////    Ball bounces off the upper bumper (bumper at TRACKLEN)   
   if (ball_x > TRACKLEN) {
-    ball_x =  TRACKLEN - (ball_x * BALL_BOUNCE);
+    ball_x =  TRACKLEN; 
     ball_v = -(ball_v * BALL_BOUNCE);
   }
 }
@@ -170,14 +169,14 @@ void move_ball_one_timestep () {
 //     of position.  Ain't that cool!  :-)
 void set_quantized_values () {
   //  Track angle
-  quantized_track_ang =  NTRACKQ * (
+  quantized_track_ang =  (NTRACKQ - 0.5) * (
 			       (track_ang - TRACKANGMIN)
 			       / (TRACKANGMAX - TRACKANGMIN));
 			       
     //			       ((track_ang - TRACKANGMIN) * (NTRACKQ + 1))
     //			       / (TRACKANGMAX - TRACKANGMIN));  
   //  Ball position
-  quantized_ball_x = (int) ((ball_x ) *  NBALLQ) / (TRACKLEN);
+  quantized_ball_x = (int) ((ball_x ) * (NBALLQ - 0.5)) / (TRACKLEN);
 }
 
 void set_quantized_state_queues () {
@@ -209,6 +208,8 @@ void que_to_quan_state () {
     bmax = bmax * NTRACKQ;
   }
   quan_state = bstate;
+  if (quan_state >= STATES)
+    fprintf (stderr, "STATE OVERFLOW: %d, should be %d\n", quan_state, STATES);
 }
   
 //    Reward / punishment function
@@ -242,6 +243,7 @@ void main ()
   printf ("Got brains! pointer is 0x%lx\n", (long) brain1);
   bz_chain *chain1;
   chain1 = bz_newchain (brain1);
+  printf ("Got chains!  pointer is 0x%lx\n", (long) chain1);
   
   printf (" I will run %d steps of balancing, and report every %d steps.\n",
 	  REPEATS, BATCHSIZE);
@@ -267,7 +269,7 @@ void main ()
     //printf ("TC?  ");  fflush (stdout);
     //scanf ("%d", &track_cmd);
     track_cmd = 2;
-    move_track_one_timestep (track_cmd);   //  GROT FROM WHERE DO WE GET THIS?
+    move_track_one_timestep (track_cmd);   
     //   2)  move the ball
     move_ball_one_timestep ();
     //   3)  quantize the track and ball
@@ -287,7 +289,8 @@ void main ()
     //   7)  ask the brain what to do next
     track_cmd = bz_nextaction (brain1, quan_state, NULL, NULL, NULL);
     //   8)   record statistics and output trace 
-    printf ("TC: %d  A: %f  X: %f  V: %f BQ: %d  TQ: %d  Err: %f  Score: %f\n",
+    printf ("Cycle: %d Br: 0x%lx Ch: 0x%lx TC: %d  A: %f  X: %f  V: %f BQ: %d  TQ: %d  Err: %f  Score: %f\n",
+	    reps, brain1, chain1,
 	    track_cmd, track_ang, ball_x, ball_v,
 	    quantized_ball_x, quantized_track_ang,
 	    BALL_SETPOINT - ball_x, cur_reward); 

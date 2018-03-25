@@ -38,9 +38,9 @@
 //   and velocity (in radians/sec)
 float track_ang, track_v;
 int quantized_track_ang ;
-#define INITIAL_TRACK_ANGLE 0.0
+#define INITIAL_TRACK_ANGLE TRACKANGMIN
 #define INITIAL_TRACK_VEL 0.0
-#define TRACK_SLEW_RATE 1.0 
+#define TRACK_SLEW_RATE 0.1 
 
 #define INITIAL_BALL_X 0.0
 #define INITIAL_BALL_V 0.0
@@ -52,18 +52,18 @@ int quantized_ball_x;
 //    Mass of the ball (we normalize to 1.0 Kg right now)
 #define BALL_MASS 1.0
 //   amount of noise (perturbation) applied to the "real" ball, in Newtons
-#define BALL_NOISE 0.0001
+#define BALL_NOISE  0.00000001
 //   amount of measurement noise (jitter) applied to ball, each timestep
-#define BALL_JITTER 0.001
+#define BALL_JITTER 0.00000001
 //   coefficient of restitution - how fast does the ball recoil when it
 //   hits the stops at 0 and TRACKLEN?
 #define BALL_BOUNCE 0.5
 //   switchpoint between static and dynamic friction (meters/sec)
 #define BALL_VEL_FRIC_THRESH 0.05
 //   coefficient of static friction
-#define BALL_STATIC_FRIC 0.05
+#define BALL_STATIC_FRIC 0.005
 //   coefficient of dynamic friction
-#define BALL_DYN_FRIC 0.02
+#define BALL_DYN_FRIC 0.002
 
 //
 //     QUANTIZING AND MAPPING THE MODEL :  THE LEARNING ALGORITHM SEES
@@ -94,7 +94,7 @@ long unsigned quan_state;
 //   how many cycles of the game to run
 #define REPEATS   500
 //   batch size (statistics gathering only)
-#define BATCHSIZE 10000
+#define BATCHSIZE 500
 //   reward params for the boxes (default at least)
 #define WIN_ADD 1.0
 #define WIN_MUL 1.0
